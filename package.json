@@ -1,0 +1,11 @@
+{
+  "name": "i_dont_waste_time",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.py",
+  "scripts": {
+    "start": "python backend/index.py"
+  },
+  "author": "",
+  "license": "ISC"
+}
