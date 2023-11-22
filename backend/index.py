@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import socket
+import time
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+import json
 
 host = socket.gethostname()
 
@@ -39,7 +43,7 @@ def get_user_affairs():
 
     print(user_affairs[user_id])
     date = request.args.get('date')
-    # print('Обращение в affairs' + user_affairs[user_id]['affairs'])
+    
     if date not in user_affairs[user_id]['affairs']:
         user_affairs[user_id]['affairs'][date] = []
 
@@ -47,6 +51,53 @@ def get_user_affairs():
         json.dump(user_affairs, file, ensure_ascii=False, indent=4)
 
     return jsonify(user_affairs[user_id])  # Отправляем ответ клиенту в формате JSON.
+
+
+@app.route('/getCategoryStats', methods=['GET'])
+def get_category_stats():
+    user_id = request.args.get('userId')
+    date_range = request.args.get('dateRange')
+
+    with open('backend/user_affairs.json', 'r', encoding='utf-8') as file:
+        user_affairs = json.load(file)
+
+    if user_id not in user_affairs:
+        return jsonify({"error": "User not found"})
+
+    if date_range not in ['day', 'week', 'month', 'year']:
+        return jsonify({"error": "Invalid date range"})
+
+    date_today = datetime.now()
+    start_date = None
+
+    if date_range == 'day':
+        start_date = date_today - timedelta(days=1)
+    elif date_range == 'week':
+        start_date = date_today - timedelta(weeks=1)
+    elif date_range == 'month':
+        start_date = date_today - relativedelta(months=1)
+    elif date_range == 'year':
+        start_date = date_today - relativedelta(years=1)
+
+    total_category_time = {}
+
+    for date, affairs in user_affairs[user_id]['affairs'].items():
+        affair_date = datetime.strptime(date, '%d-%m-%Y')
+        if affair_date >= start_date and affair_date <= date_today:
+            for affair in affairs:
+                category_name = affair['category'][0]
+                category_color = affair['category'][1]
+                duration = [int(i) for i in affair['duration'].split()]
+                duration_seconds = duration[0]*3600 + duration[1]*60 + duration[2]
+
+                if category_name in total_category_time:
+                    total_category_time[category_name]['duration'] += duration_seconds
+                else:
+                    total_category_time[category_name] = {'duration': duration_seconds, 'color': category_color}
+
+    print(total_category_time)
+    
+    return jsonify(total_category_time)
 
 
 @app.route('/addAffair', methods=['POST'])
