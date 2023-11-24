@@ -2,10 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import socket
-import time
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import json
+import calendar
 
 host = socket.gethostname()
 
@@ -72,12 +72,22 @@ def get_category_stats():
 
     if date_range == 'day':
         start_date = date_today - timedelta(days=1)
+        range_duration = 86400
     elif date_range == 'week':
-        start_date = date_today - timedelta(weeks=1)
+        start_date = date_today - timedelta(days=date_today.weekday())
+        range_duration = 7 * 86400
     elif date_range == 'month':
-        start_date = date_today - relativedelta(months=1)
+        start_date = date_today.replace(day=1)
+        days_in_month = calendar.monthrange(date_today.year, date_today.month)[1]
+        # Вычисляем range_duration
+        range_duration = days_in_month * 86400
     elif date_range == 'year':
-        start_date = date_today - relativedelta(years=1)
+        start_date = date_today.replace(month=1, day=1)
+        year = date_today.year
+        print(year)
+        days_in_year = calendar.isleap(year) and 366 or 365
+        # Вычисляем range_duration
+        range_duration = days_in_year * 86400
 
     total_category_time = {}
 
@@ -96,7 +106,8 @@ def get_category_stats():
                     total_category_time[category_name] = {'duration': duration_seconds, 'color': category_color}
 
     print(total_category_time)
-    
+    total_category_time['  Другое'] = {'duration': range_duration - sum([value['duration'] for value in total_category_time.values()]), 'color': '#DBDBDB'}
+
     return jsonify(total_category_time)
 
 
