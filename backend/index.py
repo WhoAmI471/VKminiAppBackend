@@ -1,3 +1,4 @@
+import random
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
@@ -31,15 +32,95 @@ def api():
     return data
 
 
+@app.route('/getDailyAdvice', methods=['GET'])
+def get_daily_advice():
+    user_id = request.args.get('userId')
+    
+    with open('backend/advices.json', 'r', encoding='utf-8') as file:
+        advices_data = json.load(file)
+        advices_data = advices_data['advices']
+        
+    with open('backend/user_affairs.json', 'r', encoding='utf-8') as file:
+        user_affairs = json.load(file)
+        index = user_affairs[user_id]['index']
+        
+    return jsonify(advices_data[user_affairs[user_id]['advices'][index]])
+
+
+@app.route('/getNextAdvice', methods=['GET'])
+def get_next_advice():
+    user_id = request.args.get('userId')
+    
+    with open('backend/user_affairs.json', 'r', encoding='utf-8') as file:
+        user_affairs = json.load(file)
+    
+    with open('backend/advices.json', 'r', encoding='utf-8') as file:
+        advices_data = json.load(file)
+        advices_data = advices_data['advices']
+
+    if user_id not in user_affairs:
+        user_affairs[user_id] = {'affairs':{}}
+        
+        user_affairs[user_id]['advices'] = list(range(len(advices_data['advices'])))
+        user_affairs[user_id]['index'] = 0
+
+        random.shuffle(user_affairs[user_id]['advices'])
+
+    if (len(advices_data['advices']) != len(user_affairs[user_id]['advices'])):
+        
+        user_affairs[user_id]['advices'] = list(range(len(advices_data['advices'])))
+
+        print(list(range(len(advices_data))))
+        random.shuffle(user_affairs[user_id]['advices'])
+
+
+    index = user_affairs[user_id]['index']
+
+    if (len(user_affairs[user_id]['advices']) > 0):
+        user_affairs[user_id]['index'] = index + 1
+
+        if (user_affairs[user_id]['index'] > len(user_affairs[user_id]['advices'])):
+            user_affairs[user_id]['index'] = 0
+            index = user_affairs[user_id]['index'] + 1
+
+        print(user_affairs)
+        with open('backend/user_affairs.json', 'w', encoding='utf-8') as file:
+            json.dump(user_affairs, file, ensure_ascii=False, indent=4)
+
+        return jsonify(advices_data[user_affairs[user_id]['advices'][index]])
+    else:
+        return jsonify({'error': 'User not found'})
+
+
+
 @app.route('/getAffairs', methods=['GET'])
 def get_user_affairs():
     user_id = request.args.get('userId')
 
+    
+    with open('backend/advices.json', 'r', encoding='utf-8') as file:
+        advices = json.load(file)
+
+
     with open('backend/user_affairs.json', 'r', encoding='utf-8') as file:
         user_affairs = json.load(file)
 
+
+
     if user_id not in user_affairs:
         user_affairs[user_id] = {'affairs':{}}
+        
+        user_affairs[user_id]['advices'] = list(range(len(advices['advices'])))
+        user_affairs[user_id]['index'] = 0
+
+        random.shuffle(user_affairs[user_id]['advices'])
+
+    if (len(advices['advices']) != len(user_affairs[user_id]['advices'])):
+        
+        user_affairs[user_id]['advices'] = list(range(len(advices['advices'])))
+
+        print(list(range(len(advices))))
+        random.shuffle(user_affairs[user_id]['advices'])
 
     print(user_affairs[user_id])
     date = request.args.get('date')
@@ -106,9 +187,12 @@ def get_category_stats():
                     total_category_time[category_name] = {'duration': duration_seconds, 'color': category_color}
 
     print(total_category_time)
-    total_category_time['  Другое'] = {'duration': range_duration - sum([value['duration'] for value in total_category_time.values()]), 'color': '#DBDBDB'}
+    sorted_category_time = dict(sorted(total_category_time.items(), key=lambda x: x[1]['duration'], reverse=True))
 
-    return jsonify(total_category_time)
+    sorted_category_time['  Другое'] = {'duration': range_duration - sum([value['duration'] for value in sorted_category_time.values()]), 'color': '#DBDBDB'}
+
+
+    return jsonify(sorted_category_time)
 
 
 @app.route('/addAffair', methods=['POST'])
@@ -125,6 +209,7 @@ def add_affair():
     else:
         data[user_id]['affairs'] = {date:[new_affair]}
         print(data[user_id]['affairs'])
+
     with open('backend/user_affairs.json', 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4)  # Сохраняем обновленные данные в файл JSON
 
