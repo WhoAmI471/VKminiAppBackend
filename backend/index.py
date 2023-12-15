@@ -227,6 +227,6 @@ def remove_affair():
     
 if __name__ == '__main__':
     try:
-        app.run( host=host, debug='True', ssl_context=('cert.pem', 'Ubuntu-STD2-1-1-10GB-iCsllaiF.pem'))
+        app.run( host=host, port='8078', debug='True', ssl_context=('cert.pem', 'Ubuntu-STD2-1-1-10GB-iCsllaiF.pem'))
     except:
-        app.run( host=host, debug='True', ssl_context=('cert.pem', 'key.pem'))
+        app.run( host=host, port='8078', debug='True', ssl_context=('cert.pem', 'key.pem'))
