@@ -14,24 +14,6 @@ app = Flask(__name__)
 CORS(app)
 
 
-@app.route('/')
-def hello_world():
-    print('server run')
-    return 'Hello World!'
-
-
-@app.route('/api')
-def api():
-    data = [{'message': 'Request successful'}]
-
-    with open('backend/data.json', 'w') as file:
-        json.dump(data, file)
-
-    print("server is active")
-
-    return data
-
-
 @app.route('/getDailyAdvice', methods=['GET'])
 def get_daily_advice():
     user_id = request.args.get('userId')
@@ -66,12 +48,12 @@ def get_next_advice():
 
         random.shuffle(user_affairs[user_id]['advices'])
 
-    if (len(advices_data['advices']) != len(user_affairs[user_id]['advices'])):
-        
-        user_affairs[user_id]['advices'] = list(range(len(advices_data['advices'])))
+    if len(advices_data) != len(user_affairs[user_id]['advices']):
+        user_affairs[user_id]['advices'] = list(range(len(advices_data)))
 
         print(list(range(len(advices_data))))
         random.shuffle(user_affairs[user_id]['advices'])
+
 
 
     index = user_affairs[user_id]['index']
@@ -150,34 +132,42 @@ def get_category_stats():
 
     date_today = datetime.now()
     start_date = None
+    end_date = None
+
 
     if date_range == 'day':
         start_date = date_today - timedelta(days=1)
         range_duration = 86400
+        end_date = date_today
     elif date_range == 'week':
         start_date = date_today - timedelta(days=date_today.weekday())
         range_duration = 7 * 86400
+        end_date = date_today - timedelta(days=date_today.weekday() - 6)
     elif date_range == 'month':
         start_date = date_today.replace(day=1)
         days_in_month = calendar.monthrange(date_today.year, date_today.month)[1]
-        # Вычисляем range_duration
+        end_date = date_today.replace(day=days_in_month)
         range_duration = days_in_month * 86400
     elif date_range == 'year':
         start_date = date_today.replace(month=1, day=1)
         year = date_today.year
-        print(year)
         days_in_year = calendar.isleap(year) and 366 or 365
-        # Вычисляем range_duration
+        end_date = date_today.replace(month=12, day=31)
         range_duration = days_in_year * 86400
 
     total_category_time = {}
 
     for date, affairs in user_affairs[user_id]['affairs'].items():
         affair_date = datetime.strptime(date, '%d-%m-%Y')
-        if affair_date >= start_date and affair_date <= date_today:
+
+        
+
+        if start_date <= affair_date and affair_date <= end_date or date_range == "month":
+            print(f"{affair_date} >= {start_date} and {end_date} >= {affair_date}")
             for affair in affairs:
                 category_name = affair['category'][0]
                 category_color = affair['category'][1]
+
                 duration = [int(i) for i in affair['duration'].split()]
                 duration_seconds = duration[0]*3600 + duration[1]*60 + duration[2]
 
@@ -187,12 +177,12 @@ def get_category_stats():
                     total_category_time[category_name] = {'duration': duration_seconds, 'color': category_color}
 
     print(total_category_time)
-    sorted_category_time = dict(sorted(total_category_time.items(), key=lambda x: x[1]['duration'], reverse=True))
+    # sorted_category_time = dict(sorted(total_category_time.items(), key=lambda x: x[1]['duration'], reverse=True))
 
-    sorted_category_time['  Другое'] = {'duration': range_duration - sum([value['duration'] for value in sorted_category_time.values()]), 'color': '#DBDBDB'}
+    total_category_time['  Другое'] = {'duration': range_duration - sum([value['duration'] for value in total_category_time.values()]), 'color': '#DBDBDB'}
 
 
-    return jsonify(sorted_category_time)
+    return jsonify(total_category_time)
 
 
 @app.route('/addAffair', methods=['POST'])
@@ -236,4 +226,4 @@ def remove_affair():
 
     
 if __name__ == '__main__':
-    app.run( host=host, debug='True', ssl_context=('cert.pem', 'key.pem'))
+    app.run( host=host, debug='True', ssl_context=('cert.pem', 'Ubuntu-STD2-1-1-10GB-iCsllaiF.pem'))
