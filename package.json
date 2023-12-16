@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.py",
   "scripts": {
-    "start": "python backend/index.py"
+    "start": "python backend/app.py"
   },
   "author": "",
   "license": "ISC"
